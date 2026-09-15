@@ -39,4 +39,6 @@ export interface ReaderSettings {
   soundEnabled: boolean;
   spreadMode: 'single' | 'double' | 'auto';
   autoPageTurn: boolean;
+  performanceMode: boolean; // Ultra-lightweight 60FPS mode for budget Android devices
+  keepAwake: boolean; // Prevent screen sleep while reading
 }

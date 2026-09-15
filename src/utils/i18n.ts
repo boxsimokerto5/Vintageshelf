@@ -91,6 +91,10 @@ export const translations = {
     rewardedAdSuccess: 'Selamat! Mode Malam Romantis telah dibuka & aktif.',
     rewardedAdWatchBtn: 'Tonton Video Singkat (5 Detik)',
     romanticNightModeActive: 'Mode Malam Romantis Aktif',
+    performanceModeTitle: 'Mode Hemat / Performa Ringan (60 FPS)',
+    performanceModeDesc: 'Nonaktifkan efek bayangan berat untuk kelancaran maksimal di HP RAM kecil.',
+    keepAwakeLabel: 'Layar Tetap Menyala Saat Membaca',
+    offlineReadyBadge: '100% Siap Offline APK',
 
     // PWA Install
     installAndroid: 'Pasang di Android',
@@ -222,6 +226,10 @@ export const translations = {
     rewardedAdSuccess: 'Congratulations! Romantic Night Mode unlocked & active.',
     rewardedAdWatchBtn: 'Watch Short Video (5 Seconds)',
     romanticNightModeActive: 'Romantic Night Mode Active',
+    performanceModeTitle: 'Lightweight Performance Mode (60 FPS)',
+    performanceModeDesc: 'Disables heavy shadows for maximum smooth reading on lower RAM phones.',
+    keepAwakeLabel: 'Keep Screen Awake While Reading',
+    offlineReadyBadge: '100% Offline APK Ready',
 
     // PWA Install
     installAndroid: 'Install on Android',

@@ -22,6 +22,7 @@ import { Book, ReadingTheme, ReaderSettings, PdfBlendMode } from '../types';
 import { playPageFlipSound, toggleAmbiance, startAmbiance, stopAmbiance, isAmbiancePlaying } from '../utils/audio';
 import { PdfService } from '../utils/pdfRenderer';
 import { getBookPdfBlob, updateBookProgress } from '../utils/storage';
+import { NativeBridge } from '../utils/nativeService';
 import { useLanguage } from '../utils/i18n';
 import { LanguageToggle } from './LanguageToggle';
 import { AntiqueCandlePlay } from './AntiqueCandlePlay';
@@ -50,6 +51,8 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
     soundEnabled: true,
     spreadMode: 'auto',
     autoPageTurn: false,
+    performanceMode: false,
+    keepAwake: true,
   });
 
   const [isPdfLandscape, setIsPdfLandscape] = useState(false);
@@ -74,6 +77,24 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
     };
   }, []);
 
+  // Capacitor Native APK lifecycle & Hardware Back Button handling
+  useEffect(() => {
+    NativeBridge.enterImmersiveReadingMode();
+    NativeBridge.registerBackButtonHandler(() => {
+      onClose();
+      return true;
+    });
+
+    return () => {
+      NativeBridge.exitImmersiveReadingMode();
+    };
+  }, [onClose]);
+
+  // Keep screen awake while reading
+  useEffect(() => {
+    NativeBridge.keepScreenAwake(settings.keepAwake);
+  }, [settings.keepAwake]);
+
   const handleToggleAmbiance = useCallback(() => {
     const newState = toggleAmbiance((playing) => setIsAmbianceActive(playing));
     setIsAmbianceActive(newState);
@@ -90,6 +111,15 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
   const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
   const [pdfLoading, setPdfLoading] = useState(book.fileType === 'pdf');
   const [renderedPages, setRenderedPages] = useState<Record<number, string>>({});
+
+  // Revoke all Blob URLs on unmount to completely free memory
+  useEffect(() => {
+    return () => {
+      Object.values(renderedPages).forEach((url: string) => {
+        PdfService.revokePageUrl(url);
+      });
+    };
+  }, [renderedPages]);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
@@ -146,22 +176,25 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
     };
   }, [book.id, book.fileType]);
 
-  // Pre-render current & adjacent PDF pages with Sliding Window LRU Cache
+  // Pre-render current & adjacent PDF pages with Sliding Window LRU Cache & RAM Cleanup
   const renderPdfPageNumber = useCallback(
     async (pageNum: number) => {
       if (!pdfDoc || pageNum < 1 || pageNum > book.totalPages || renderedPages[pageNum]) {
         return;
       }
       try {
-        const rendered = await PdfService.renderPageToDataUrl(pdfDoc, pageNum, 1100);
+        const targetW = settings.performanceMode ? 850 : 1100;
+        const rendered = await PdfService.renderPageToDataUrl(pdfDoc, pageNum, targetW, settings.performanceMode);
         setRenderedPages((prev) => {
           const next = { ...prev, [pageNum]: rendered.dataUrl };
-          // Keep only pages within window [pageNum - 4, pageNum + 4] to prevent mobile RAM spikes
-          const minAllowed = Math.max(1, pageNum - 4);
-          const maxAllowed = Math.min(book.totalPages, pageNum + 4);
+          // Keep only pages within sliding window to prevent mobile RAM spikes
+          const windowSpan = settings.performanceMode ? 2 : 4;
+          const minAllowed = Math.max(1, pageNum - windowSpan);
+          const maxAllowed = Math.min(book.totalPages, pageNum + windowSpan);
           for (const key of Object.keys(next)) {
             const p = Number(key);
             if (p < minAllowed || p > maxAllowed) {
+              PdfService.revokePageUrl(next[p]);
               delete next[p];
             }
           }
@@ -171,7 +204,7 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
         console.error(`Failed to render page ${pageNum}:`, err);
       }
     },
-    [pdfDoc, book.totalPages, renderedPages]
+    [pdfDoc, book.totalPages, renderedPages, settings.performanceMode]
   );
 
   useEffect(() => {
@@ -882,29 +915,63 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
             />
           </div>
 
-          {/* Font Size Scaling (for text manuscripts) */}
-          {book.fileType !== 'pdf' && (
-            <div className="mb-2">
-              <div className="flex items-center justify-between text-[11px] text-[#c2a988] mb-1">
-                <span>{t('fontSizeLabel')}</span>
-                <span>{settings.fontSize}px</span>
+          {/* Performance Mode & Keep Awake Native Controls */}
+          <div className="pt-3 border-t border-[#5e3816] space-y-2.5">
+            {/* 60 FPS Performance Mode */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-[#f5d77f]">
+                  ⚡ {t('performanceModeTitle')}
+                </p>
+                <p className="text-[10px] text-[#a89073] max-w-[210px] leading-tight">
+                  {t('performanceModeDesc')}
+                </p>
               </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setSettings((s) => ({ ...s, fontSize: Math.max(14, s.fontSize - 2) }))}
-                  className="flex-1 py-1 rounded bg-[#361e11] border border-[#6b471f] text-xs font-bold hover:bg-[#482816]"
-                >
-                  A-
-                </button>
-                <button
-                  onClick={() => setSettings((s) => ({ ...s, fontSize: Math.min(28, s.fontSize + 2) }))}
-                  className="flex-1 py-1 rounded bg-[#361e11] border border-[#6b471f] text-xs font-bold hover:bg-[#482816]"
-                >
-                  A+
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setSettings((s) => ({ ...s, performanceMode: !s.performanceMode }))}
+                className={`w-10 h-5 rounded-full transition-colors relative p-0.5 ${
+                  settings.performanceMode ? 'bg-[#d4af37]' : 'bg-[#4a2814]'
+                }`}
+              >
+                <span
+                  className={`block w-4 h-4 rounded-full bg-white transition-transform ${
+                    settings.performanceMode ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
             </div>
-          )}
+
+            {/* Screen Stay Awake */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-[#f5d77f]">
+                  💡 {t('keepAwakeLabel')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettings((s) => ({ ...s, keepAwake: !s.keepAwake }))}
+                className={`w-10 h-5 rounded-full transition-colors relative p-0.5 ${
+                  settings.keepAwake ? 'bg-[#d4af37]' : 'bg-[#4a2814]'
+                }`}
+              >
+                <span
+                  className={`block w-4 h-4 rounded-full bg-white transition-transform ${
+                    settings.keepAwake ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* APK Offline Badge */}
+            <div className="text-center pt-2 pb-1 border-t border-[#5e3816]/60">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#180d06] border border-[#d4af37]/40 text-[9px] font-mono text-[#d4af37] tracking-wider uppercase">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {t('offlineReadyBadge')}
+              </span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -927,11 +994,13 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
 
         {/* Outer Heavy Leather Book Cover Layer */}
         <div 
-          className={`relative w-full ${isPdfLandscape ? 'max-w-6xl' : 'max-w-5xl'} h-[84vh] max-h-[820px] rounded-lg p-2 sm:p-4 flex items-stretch shadow-[0_20px_50px_rgba(0,0,0,0.95)] transition-all duration-300`}
+          className={`relative w-full ${isPdfLandscape ? 'max-w-6xl' : 'max-w-5xl'} h-[84vh] max-h-[820px] rounded-lg p-2 sm:p-4 flex items-stretch ${
+            settings.performanceMode ? 'shadow-xl' : 'shadow-[0_20px_50px_rgba(0,0,0,0.95)]'
+          } transition-all duration-300`}
           style={{
             backgroundColor: book.spineColor || '#3d1c0c',
-            backgroundImage: 'radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.4) 100%)',
-            boxShadow: '0 0 0 2px #5c381c, inset 0 0 15px rgba(0,0,0,0.8), 0 25px 50px rgba(0,0,0,0.9)'
+            backgroundImage: settings.performanceMode ? undefined : 'radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.4) 100%)',
+            boxShadow: settings.performanceMode ? '0 0 0 1px #5c381c' : '0 0 0 2px #5c381c, inset 0 0 15px rgba(0,0,0,0.8), 0 25px 50px rgba(0,0,0,0.9)'
           }}
           onClick={(e) => e.stopPropagation()} // Prevent clicking book from closing header
         >
