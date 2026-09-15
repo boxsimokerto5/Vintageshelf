@@ -5,6 +5,7 @@ import { VintageBookshelf } from './components/VintageBookshelf';
 import { VintageBookReader } from './components/VintageBookReader';
 import { ImportModal } from './components/ImportModal';
 import { AntiqueDeleteConfirmModal } from './components/AntiqueDeleteConfirmModal';
+import { SplashScreen } from './components/SplashScreen';
 
 export default function App() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -12,6 +13,7 @@ export default function App() {
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
 
   // Load books from IndexedDB on startup
   useEffect(() => {
@@ -69,17 +71,13 @@ export default function App() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="h-screen h-[100dvh] w-full wood-cabinet flex flex-col items-center justify-center text-[#d4af37] font-serif overflow-hidden">
-        <div className="w-12 h-12 rounded-full border-2 border-[#d4af37] border-t-transparent animate-spin mb-4" />
-        <p className="text-sm tracking-widest uppercase font-display">Membuka Pustaka Kayu Kuno...</p>
-      </div>
-    );
-  }
-
   return (
     <main className="h-screen h-[100dvh] w-full bg-[#170e08] text-[#ebdcc2] relative select-none overflow-hidden flex flex-col">
+      {/* Vintage Shelf Splash Screen */}
+      {showSplash && (
+        <SplashScreen onFinish={() => setShowSplash(false)} />
+      )}
+
       {/* Bookshelf View */}
       <VintageBookshelf
         books={books}

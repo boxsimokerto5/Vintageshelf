@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 export type Language = 'id' | 'en';
 
@@ -60,6 +60,9 @@ export const translations = {
     soundOff: 'Suara dimatikan',
     readingSettings: 'Pengaturan Mode Baca & Kertas',
     fullscreen: 'Layar Penuh',
+    fullCanvas: 'Layar Penuh Kanvas',
+    featuresMenu: 'Fitur & Menu',
+    fullCanvasHint: 'Mode Layar Penuh • Ketuk layar atau tombol Fitur untuk menu',
     paperAndNightMode: 'Nuansa Kertas & Malam',
     vintagePaperColor: 'Warna Kertas Kuno',
     parchmentTheme: 'Parchment',
@@ -195,6 +198,9 @@ export const translations = {
     soundOff: 'Sound muted',
     readingSettings: 'Paper & Reading Mode Settings',
     fullscreen: 'Fullscreen',
+    fullCanvas: 'Full Canvas',
+    featuresMenu: 'Features & Menu',
+    fullCanvasHint: 'Full Canvas Mode • Tap screen or Features button for menu',
     paperAndNightMode: 'Paper & Night Atmosphere',
     vintagePaperColor: 'Vintage Paper Tint',
     parchmentTheme: 'Parchment',
@@ -288,5 +294,53 @@ export const LanguageContext = createContext<LanguageContextType>({
   setLanguage: () => {},
   t: (key) => translations.id[key] || key,
 });
+
+export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [language, setLanguageState] = useState<Language>(() => {
+    try {
+      const saved = localStorage.getItem('vintage_bookshelf_lang');
+      if (saved === 'en' || saved === 'id') {
+        return saved;
+      }
+      // Check device default language
+      const navLang = navigator.language?.toLowerCase() || '';
+      return navLang.startsWith('id') ? 'id' : 'en';
+    } catch {
+      return 'id';
+    }
+  });
+
+  const setLanguage = useCallback((lang: Language) => {
+    setLanguageState(lang);
+    try {
+      localStorage.setItem('vintage_bookshelf_lang', lang);
+      document.documentElement.lang = lang;
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      document.documentElement.lang = language;
+    } catch {
+      // ignore
+    }
+  }, [language]);
+
+  const t = useCallback(
+    (key: TranslationKey): string => {
+      const langDict = translations[language] || translations.id;
+      return (langDict as Record<string, string>)[key] || translations.id[key] || (key as string);
+    },
+    [language]
+  );
+
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+};
 
 export const useLanguage = () => useContext(LanguageContext);

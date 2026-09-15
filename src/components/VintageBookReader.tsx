@@ -40,7 +40,7 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
   onClose,
   onUpdateBook,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [currentPage, setCurrentPage] = useState(book.currentPage || 1);
   const [settings, setSettings] = useState<ReaderSettings>({
     theme: 'parchment',
@@ -57,13 +57,23 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
 
   const [isPdfLandscape, setIsPdfLandscape] = useState(false);
 
-  const [showControls, setShowControls] = useState(true);
+  // Full Canvas Immersive Mode on opening book
+  const [showControls, setShowControls] = useState(false);
+  const [showFullCanvasHint, setShowFullCanvasHint] = useState(true);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isFlipping, setIsFlipping] = useState<'next' | 'prev' | null>(null);
   const [flippingFromPage, setFlippingFromPage] = useState<number>(book.currentPage || 1);
   const [flippingTargetPage, setFlippingTargetPage] = useState<number>(book.currentPage || 1);
   const [isBookmarked, setIsBookmarked] = useState(book.bookmarkPages.includes(book.currentPage));
+  
+  // Auto-hide full canvas reminder hint after 3.2 seconds
+  useEffect(() => {
+    const hintTimer = setTimeout(() => {
+      setShowFullCanvasHint(false);
+    }, 3200);
+    return () => clearTimeout(hintTimer);
+  }, []);
   
   // Ambient Sound & Rewarded Ad States from Reference Image
   const [isAmbianceActive, setIsAmbianceActive] = useState(isAmbiancePlaying());
@@ -450,7 +460,9 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
                 <img
                   src={pageImage}
                   alt={`${t('pageOf')} ${pageNum}`}
-                  className={`max-h-[64vh] max-w-full object-contain rounded-xs shadow-md transition-all duration-300 ${getPdfFilterClass()}`}
+                  className={`${
+                    showControls ? 'max-h-[64vh] sm:max-h-[70vh]' : 'max-h-[82vh] sm:max-h-[88vh] md:max-h-[92vh]'
+                  } max-w-full object-contain rounded-xs shadow-md transition-all duration-300 ${getPdfFilterClass()}`}
                 />
               </div>
             ) : (
@@ -601,8 +613,8 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
 
       {/* Top Collapsible Vintage Header Bar */}
       <div 
-        className={`z-40 transition-all duration-300 bg-gradient-to-b from-[#211208] to-[#160b05] border-b border-[#633f1b] px-4 py-2.5 flex items-center justify-between shadow-2xl ${
-          showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 bg-gradient-to-b from-[#211208]/95 via-[#180c05]/95 to-transparent border-b border-[#633f1b] px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between shadow-2xl backdrop-blur-xs ${
+          showControls ? 'translate-y-0 opacity-100 pointer-events-auto' : '-translate-y-full opacity-0 pointer-events-none'
         }`}
       >
         {/* Back to Shelf Button */}
@@ -697,16 +709,57 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
             <Sliders className="w-4 h-4 text-[#d4af37]" />
           </button>
 
+          {/* Full Canvas Mode (Hide Controls) */}
+          <button
+            id="btn-hide-controls-full-canvas"
+            onClick={() => setShowControls(false)}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-[#381f0f] border border-[#d4af37] text-[#ffd978] hover:bg-[#4d2c16] hover:text-[#fff] transition active:scale-95 shadow-md"
+            title={t('fullCanvas')}
+          >
+            <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#ffd978]" />
+            <span className="text-[10px] sm:text-[11px] font-serif font-bold hidden md:inline">{t('fullCanvas')}</span>
+          </button>
+
           {/* Fullscreen Toggle */}
           <button
             onClick={toggleFullscreen}
-            className="p-2 rounded bg-[#2b170c] border border-[#6b471f] text-[#c9a66b] hover:text-[#fff] transition hidden sm:block"
+            className="p-2 rounded bg-[#2b170c] border border-[#6b471f] text-[#c9a66b] hover:text-[#fff] transition hidden lg:block"
             title={t('fullscreen')}
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         </div>
       </div>
+
+      {/* Floating Maximize / Minimize Button to Reveal Features when in Full Canvas */}
+      {!showControls && (
+        <button
+          id="btn-show-controls-floating"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowControls(true);
+            setShowFullCanvasHint(false);
+          }}
+          className="fixed top-3 right-3 sm:top-4 sm:right-4 z-50 flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#271408]/90 hover:bg-[#3d1f0d] border border-[#d4af37] text-[#ffd978] shadow-[0_4px_25px_rgba(0,0,0,0.85)] backdrop-blur-md transition-all duration-300 active:scale-95 cursor-pointer select-none group"
+          title={t('featuresMenu')}
+          aria-label={t('featuresMenu')}
+        >
+          <Minimize2 className="w-4 h-4 text-[#d4af37] group-hover:rotate-90 transition-transform duration-300" />
+          <span className="text-[11px] font-serif font-bold tracking-wide text-[#f5d77f]">
+            {t('featuresMenu')}
+          </span>
+        </button>
+      )}
+
+      {/* Floating Gentle Hint on First Open */}
+      {showFullCanvasHint && !showControls && (
+        <div className="fixed top-14 sm:top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1e0e05]/95 border border-[#d4af37]/70 text-[#f5d77f] shadow-2xl backdrop-blur-sm text-xs font-serif">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+            <span>{t('fullCanvasHint')}</span>
+          </div>
+        </div>
+      )}
 
       {/* Settings Dropdown Popover */}
       {showSettingsMenu && (
@@ -977,8 +1030,13 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
 
       {/* Main Book Stage Area */}
       <div 
-        className="flex-1 relative flex items-center justify-center p-2 sm:p-6 md:p-10 book-stage-3d overflow-hidden"
-        onClick={() => setShowControls((prev) => !prev)}
+        className={`flex-1 relative flex items-center justify-center ${
+          showControls ? 'p-2 sm:p-6 md:p-8 pt-14 pb-16 sm:pt-16 sm:pb-20' : 'p-0.5 sm:p-2 md:p-4'
+        } book-stage-3d overflow-hidden transition-all duration-300`}
+        onClick={() => {
+          setShowControls((prev) => !prev);
+          setShowFullCanvasHint(false);
+        }}
       >
         {/* Silk Bookmark Ribbon Hanging from Top */}
         {isBookmarked && (
@@ -994,7 +1052,9 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
 
         {/* Outer Heavy Leather Book Cover Layer */}
         <div 
-          className={`relative w-full ${isPdfLandscape ? 'max-w-6xl' : 'max-w-5xl'} h-[84vh] max-h-[820px] rounded-lg p-2 sm:p-4 flex items-stretch ${
+          className={`relative w-full ${isPdfLandscape ? 'max-w-6xl' : 'max-w-5xl'} ${
+            showControls ? 'h-[82vh] max-h-[820px] rounded-lg' : 'h-full max-h-none rounded-none sm:rounded-lg'
+          } p-1 sm:p-3 md:p-4 flex items-stretch ${
             settings.performanceMode ? 'shadow-xl' : 'shadow-[0_20px_50px_rgba(0,0,0,0.95)]'
           } transition-all duration-300`}
           style={{
@@ -1002,7 +1062,22 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
             backgroundImage: settings.performanceMode ? undefined : 'radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.4) 100%)',
             boxShadow: settings.performanceMode ? '0 0 0 1px #5c381c' : '0 0 0 2px #5c381c, inset 0 0 15px rgba(0,0,0,0.8), 0 25px 50px rgba(0,0,0,0.9)'
           }}
-          onClick={(e) => e.stopPropagation()} // Prevent clicking book from closing header
+          onClick={(e) => {
+            const target = e.target as HTMLElement;
+            // Let click on page turn zones, buttons, and dog-ear corners proceed without toggling
+            if (
+              target.closest('button') ||
+              target.closest('input') ||
+              target.closest('#page-turn-left-zone') ||
+              target.closest('#page-turn-right-zone') ||
+              target.closest('.dog-ear-idle-pulse') ||
+              target.closest('#candle-play-container')
+            ) {
+              return;
+            }
+            setShowControls((prev) => !prev);
+            setShowFullCanvasHint(false);
+          }}
         >
           {/* Deckle Paper Stack Thickness Effect on Side */}
           <div className="absolute top-2 bottom-2 -left-1.5 w-1.5 bg-gradient-to-r from-[#d9caa3] via-[#b39f75] to-[#7d6b4a] rounded-l-xs shadow-inner" />
@@ -1334,8 +1409,8 @@ export const VintageBookReader: React.FC<VintageBookReaderProps> = ({
 
       {/* Bottom Floating Page Slider & Navigation Bar */}
       <div 
-        className={`z-40 transition-all duration-300 bg-gradient-to-t from-[#211208] via-[#1c0e06] to-transparent px-4 py-3 flex flex-col items-center justify-center gap-2 ${
-          showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+        className={`fixed bottom-0 left-0 right-0 z-40 transition-all duration-300 bg-gradient-to-t from-[#211208]/95 via-[#1c0e06]/90 to-transparent px-4 py-3 flex flex-col items-center justify-center gap-2 backdrop-blur-xs ${
+          showControls ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-full opacity-0 pointer-events-none'
         }`}
       >
         <div className="w-full max-w-lg flex items-center justify-between gap-4 bg-[#29160a]/90 border border-[#6b471f] px-4 py-2 rounded-full shadow-2xl backdrop-blur-xs">

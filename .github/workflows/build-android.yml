@@ -1,0 +1,173 @@
+name: Build Android APK & AAB (Signed for Play Store)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'App Version Name (e.g. 1.0.0)'
+        required: false
+        default: '1.0.0'
+      version_code:
+        description: 'App Version Code (integer)'
+        required: false
+        default: '1'
+
+jobs:
+  build-android:
+    name: Build Signed APK & AAB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: 🟢 Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install Node Dependencies
+        run: |
+          npm install --legacy-peer-deps
+
+      - name: 🔨 Compile Web Production Bundle
+        run: |
+          npm run build
+
+      - name: 🔄 Sync Capacitor Android Platform
+        run: |
+          npx cap sync android
+
+      - name: 🔑 Auto-Generate Play Store Production Keystore
+        run: |
+          KEYSTORE_DIR="android/app"
+          KEYSTORE_PATH="$KEYSTORE_DIR/release.keystore"
+          mkdir -p "$KEYSTORE_DIR"
+
+          if [ -n "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ]; then
+            echo "Menggunakan Keystore dari GitHub Secrets..."
+            echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > "$KEYSTORE_PATH"
+          else
+            echo "Membuat Keystore otomatis RSA 2048-bit untuk Google Play Store..."
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE_PATH" \
+              -alias vintage_bookshelf \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass vintagepass2026 \
+              -keypass vintagepass2026 \
+              -dname "CN=Vintage Bookshelf, OU=Mobile Library, O=Vintage Bookshelf, L=Jakarta, ST=DKI, C=ID"
+          fi
+
+          echo "✅ Keystore berhasil disiapkan di $KEYSTORE_PATH"
+
+      - name: ⚙️ Grant Execution Permission to Gradle
+        run: chmod +x android/gradlew
+
+      - name: 📱 Build Signed Release APK (Universal Direct Install)
+        env:
+          KEYSTORE_FILE: "release.keystore"
+          KEYSTORE_PASSWORD: "vintagepass2026"
+          KEY_ALIAS: "vintage_bookshelf"
+          KEY_PASSWORD: "vintagepass2026"
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: 🚀 Build Signed Release AAB (Google Play Store Bundle)
+        env:
+          KEYSTORE_FILE: "release.keystore"
+          KEYSTORE_PASSWORD: "vintagepass2026"
+          KEY_ALIAS: "vintage_bookshelf"
+          KEY_PASSWORD: "vintagepass2026"
+        run: |
+          cd android
+          ./gradlew bundleRelease --no-daemon --stacktrace
+
+      - name: 📋 Organize Output Files
+        run: |
+          mkdir -p build-output
+          
+          # Copy APK
+          if [ -f "android/app/build/outputs/apk/release/app-release.apk" ]; then
+            cp "android/app/build/outputs/apk/release/app-release.apk" "build-output/VintageBookshelf-v1-release.apk"
+            echo "✅ APK berhasil disalin ke build-output/VintageBookshelf-v1-release.apk"
+          fi
+
+          # Copy AAB
+          if [ -f "android/app/build/outputs/bundle/release/app-release.aab" ]; then
+            cp "android/app/build/outputs/bundle/release/app-release.aab" "build-output/VintageBookshelf-v1-release.aab"
+            echo "✅ AAB berhasil disalin ke build-output/VintageBookshelf-v1-release.aab"
+          fi
+
+          # Save Keystore Info
+          cp "android/app/release.keystore" "build-output/vintage-bookshelf-release.keystore"
+          cat << 'EOF' > build-output/KEYSTORE_CREDENTIALS.txt
+=====================================================
+KUNCI TANDA TANGAN GOOGLE PLAY STORE (VINTAGE BOOKSHELF)
+=====================================================
+Package Name   : com.vintage.bookshelf
+Version Code   : 1
+Version Name   : 1.0.0
+Keystore File  : vintage-bookshelf-release.keystore
+Key Alias      : vintage_bookshelf
+Store Password : vintagepass2026
+Key Password   : vintagepass2026
+Validity       : 10,000 hari (~27 tahun)
+Algoritma      : RSA 2048-bit
+
+PERINGATAN PENTING:
+Simpan file .keystore ini dengan aman. Kunci ini dibutuhkan setiap kali
+Anda ingin merilis pembaruan (update) aplikasi ke Google Play Store!
+=====================================================
+EOF
+
+      - name: 📤 Upload Release APK (Download Langsung)
+        uses: actions/upload-artifact@v4
+        with:
+          name: VintageBookshelf-APK-v1
+          path: build-output/VintageBookshelf-v1-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: 📤 Upload Release AAB (Upload ke Google Play Console)
+        uses: actions/upload-artifact@v4
+        with:
+          name: VintageBookshelf-AAB-v1
+          path: build-output/VintageBookshelf-v1-release.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: 📤 Upload Keystore & Kredensial
+        uses: actions/upload-artifact@v4
+        with:
+          name: VintageBookshelf-Keystore-Credentials
+          path: |
+            build-output/vintage-bookshelf-release.keystore
+            build-output/KEYSTORE_CREDENTIALS.txt
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: 📝 Tampilkan Ringkasan Build
+        run: |
+          echo "### 📚 Vintage Bookshelf Android Build Selesai!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package Name**: \`com.vintage.bookshelf\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version Code**: \`1\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version Name**: \`1.0.0\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **APK**: Siap diinstal langsung di HP Android (tersedia di tab Artifacts)" >> $GITHUB_STEP_SUMMARY
+          echo "- **AAB**: Siap diunggah ke Google Play Console (Production / Internal Testing)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Keystore**: Ditandatangani otomatis dengan RSA 2048-bit dan tersimpan rapi" >> $GITHUB_STEP_SUMMARY

@@ -19,6 +19,7 @@ import { AntiqueSconce } from './AntiqueSconce';
 import { AntiqueBottomBar } from './AntiqueBottomBar';
 import { AntiqueSettingsModal } from './AntiqueSettingsModal';
 import { VintageBookCatalogModal } from './VintageBookCatalogModal';
+import { LanguageToggle } from './LanguageToggle';
 
 interface VintageBookshelfProps {
   books: Book[];
@@ -150,36 +151,45 @@ export const VintageBookshelf: React.FC<VintageBookshelfProps> = ({
       {/* Main Cabinet Framing - Exactly 100% Height */}
       <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl lg:max-w-3xl h-full flex flex-col bg-[#1c0d05] shadow-[0_0_50px_rgba(0,0,0,0.9)] border-x-4 border-[#3d1f0c] relative z-10 overflow-hidden">
         
-        {/* Top App Bar (Header with Menu, Title, Info) */}
-        <header className="relative w-full h-11 sm:h-13 shrink-0 ornate-wood-cornice flex items-center justify-between px-3 sm:px-5 select-none z-30">
+        {/* Top App Bar (Header with Menu, Title, Language Toggle, Info) */}
+        <header className="relative w-full h-11 sm:h-13 shrink-0 ornate-wood-cornice flex items-center justify-between px-2 sm:px-4 select-none z-30">
           {/* Left: 3-line Menu -> Opens Vintage Book Archive Catalog */}
           <button
             id="btn-menu-drawer"
             onClick={() => setIsCatalogOpen(true)}
-            className="p-1.5 rounded hover:bg-black/30 text-[#e8c89b] hover:text-[#ffd978] transition active:scale-95"
+            className="p-1.5 rounded hover:bg-black/30 text-[#e8c89b] hover:text-[#ffd978] transition active:scale-95 shrink-0"
             title={language === 'en' ? 'Book Archive Catalog' : 'Katalog Arsip Buku'}
             aria-label="Katalog Buku"
           >
             <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
 
-          {/* Center: App Title */}
-          <div className="flex items-center gap-1.5 text-center">
-            <h1 className="text-sm sm:text-base md:text-lg font-bold font-display tracking-wider text-[#f5d77f] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] truncate max-w-[220px] sm:max-w-none">
-              Vintage Bookshelf PDF Reader
+          {/* Center: App Title with Vintage Library Logo */}
+          <div className="flex items-center gap-1.5 sm:gap-2 text-center min-w-0 px-1">
+            <img 
+              src="/assets/logo.jpg" 
+              alt="Logo Perpustakaan Vintage" 
+              referrerPolicy="no-referrer"
+              className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full border border-[#d4af37]/70 shadow-[0_2px_4px_rgba(0,0,0,0.8)] object-cover shrink-0"
+            />
+            <h1 className="text-xs sm:text-sm md:text-base font-bold font-display tracking-wider text-[#f5d77f] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] truncate max-w-[130px] sm:max-w-[230px] md:max-w-none">
+              {language === 'en' ? 'Vintage Bookshelf' : 'Pustaka Kuno'}
             </h1>
           </div>
 
-          {/* Right: Info Circle Button */}
-          <button
-            id="btn-info-modal"
-            onClick={() => setIsInfoOpen(true)}
-            className="p-1.5 rounded hover:bg-black/30 text-[#e8c89b] hover:text-[#ffd978] transition active:scale-95"
-            title={language === 'en' ? 'About App' : 'Informasi Aplikasi'}
-            aria-label="Informasi"
-          >
-            <Info className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
+          {/* Right: Global Language Toggle (EN - ID) & Info Button */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <LanguageToggle />
+            <button
+              id="btn-info-modal"
+              onClick={() => setIsInfoOpen(true)}
+              className="p-1 sm:p-1.5 rounded hover:bg-black/30 text-[#e8c89b] hover:text-[#ffd978] transition active:scale-95"
+              title={language === 'en' ? 'About App' : 'Informasi Aplikasi'}
+              aria-label="Informasi"
+            >
+              <Info className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
         </header>
 
         {/* Expandable Search Bar Overlay */}
@@ -452,11 +462,19 @@ export const VintageBookshelf: React.FC<VintageBookshelfProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-[#5e3b18] pb-3 mb-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-[#f5d77f]" />
-                <h3 className="text-base font-bold font-display text-[#f5d77f]">
-                  {t('infoTitle')}
-                </h3>
+              <div className="flex items-center gap-2.5">
+                <img
+                  src="/assets/logo.jpg"
+                  alt="Emblem Perpustakaan"
+                  referrerPolicy="no-referrer"
+                  className="w-10 h-10 rounded-full border-2 border-[#d4af37] shadow-[0_2px_8px_rgba(0,0,0,0.8)] object-cover"
+                />
+                <div>
+                  <h3 className="text-base font-bold font-display text-[#f5d77f]">
+                    {t('infoTitle')}
+                  </h3>
+                  <p className="text-[10px] text-[#caa87f] font-serif">Antique Library Edition • Offline Ready</p>
+                </div>
               </div>
               <button
                 onClick={() => setIsInfoOpen(false)}

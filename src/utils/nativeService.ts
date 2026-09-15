@@ -88,6 +88,19 @@ class NativeBridgeService {
   }
 
   /**
+   * Register listener when user taps a PDF file in Android and chooses Vintage Bookshelf
+   */
+  registerFileOpenHandler(onFileOpen: (fileUrl: string) => void): void {
+    if (this.isNative()) {
+      App.addListener('appUrlOpen', (data) => {
+        if (data.url && (data.url.toLowerCase().endsWith('.pdf') || data.url.includes('pdf') || data.url.startsWith('content://') || data.url.startsWith('file://'))) {
+          onFileOpen(data.url);
+        }
+      });
+    }
+  }
+
+  /**
    * Register hardware back button listener for Android
    */
   registerBackButtonHandler(onBackPressed: () => boolean): void {

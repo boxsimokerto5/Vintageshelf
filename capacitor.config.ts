@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.antiquelibrary.vintagebookreader',
-  appName: 'Perpustakaan Kitab Kuno',
+  appId: 'com.vintage.bookshelf',
+  appName: 'Vintage Bookshelf',
   webDir: 'dist',
   backgroundColor: '#180d06',
   android: {
