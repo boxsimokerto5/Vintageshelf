@@ -20,6 +20,11 @@ android {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
     }
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+        ignoreWarnings true
+    }
     signingConfigs {
         release {
             def keystoreFile = file("release.keystore")

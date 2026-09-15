@@ -32,6 +32,9 @@ jobs:
           java-version: '21'
           cache: 'gradle'
 
+      - name: 📱 Set up Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: 🟢 Set up Node.js 22
         uses: actions/setup-node@v4
         with:
@@ -54,6 +57,7 @@ jobs:
           KEYSTORE_DIR="android/app"
           KEYSTORE_PATH="$KEYSTORE_DIR/release.keystore"
           mkdir -p "$KEYSTORE_DIR"
+          rm -f "$KEYSTORE_PATH" "android/release.keystore"
 
           if [ -n "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ]; then
             echo "Menggunakan Keystore dari GitHub Secrets..."
@@ -66,6 +70,7 @@ jobs:
               -keyalg RSA \
               -keysize 2048 \
               -validity 10000 \
+              -storetype PKCS12 \
               -storepass vintagepass2026 \
               -keypass vintagepass2026 \
               -dname "CN=Vintage Bookshelf, OU=Mobile Library, O=Vintage Bookshelf, L=Jakarta, ST=DKI, C=ID"
