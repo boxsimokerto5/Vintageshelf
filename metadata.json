@@ -1,0 +1,6 @@
+{
+  "name": "Vintage Bookshelf & Reader",
+  "description": "Aplikasi rak buku kayu vintage estetik dengan pembaca buku PDF bertekstur kertas kuno, efek balik halaman realistis, dan mode malam.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
