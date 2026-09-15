@@ -115,25 +115,25 @@ jobs:
 
           # Save Keystore Info
           cp "android/app/release.keystore" "build-output/vintage-bookshelf-release.keystore"
-          cat << 'EOF' > build-output/KEYSTORE_CREDENTIALS.txt
-=====================================================
-KUNCI TANDA TANGAN GOOGLE PLAY STORE (VINTAGE BOOKSHELF)
-=====================================================
-Package Name   : com.vintage.bookshelf
-Version Code   : 1
-Version Name   : 1.0.0
-Keystore File  : vintage-bookshelf-release.keystore
-Key Alias      : vintage_bookshelf
-Store Password : vintagepass2026
-Key Password   : vintagepass2026
-Validity       : 10,000 hari (~27 tahun)
-Algoritma      : RSA 2048-bit
-
-PERINGATAN PENTING:
-Simpan file .keystore ini dengan aman. Kunci ini dibutuhkan setiap kali
-Anda ingin merilis pembaruan (update) aplikasi ke Google Play Store!
-=====================================================
-EOF
+          {
+            echo "====================================================="
+            echo "KUNCI TANDA TANGAN GOOGLE PLAY STORE (VINTAGE BOOKSHELF)"
+            echo "====================================================="
+            echo "Package Name   : com.vintage.bookshelf"
+            echo "Version Code   : 1"
+            echo "Version Name   : 1.0.0"
+            echo "Keystore File  : vintage-bookshelf-release.keystore"
+            echo "Key Alias      : vintage_bookshelf"
+            echo "Store Password : vintagepass2026"
+            echo "Key Password   : vintagepass2026"
+            echo "Validity       : 10,000 hari (~27 tahun)"
+            echo "Algoritma      : RSA 2048-bit"
+            echo ""
+            echo "PERINGATAN PENTING:"
+            echo "Simpan file .keystore ini dengan aman. Kunci ini dibutuhkan setiap kali"
+            echo "Anda ingin merilis pembaruan (update) aplikasi ke Google Play Store!"
+            echo "====================================================="
+          } > build-output/KEYSTORE_CREDENTIALS.txt
 
       - name: 📤 Upload Release APK (Download Langsung)
         uses: actions/upload-artifact@v4
