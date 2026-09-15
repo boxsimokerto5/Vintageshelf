@@ -25,11 +25,11 @@ jobs:
       - name: 📥 Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: ☕ Set up JDK 17
+      - name: ☕ Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
           cache: 'gradle'
 
       - name: 🟢 Set up Node.js 22
@@ -71,14 +71,19 @@ jobs:
               -dname "CN=Vintage Bookshelf, OU=Mobile Library, O=Vintage Bookshelf, L=Jakarta, ST=DKI, C=ID"
           fi
 
-          echo "✅ Keystore berhasil disiapkan di $KEYSTORE_PATH"
+          # Salin juga ke folder android/ untuk menjamin akses lokasi keystore
+          cp "$KEYSTORE_PATH" "android/release.keystore"
+          echo "✅ Keystore berhasil disiapkan di $KEYSTORE_PATH dan android/release.keystore"
+
+      - name: 📜 Accept Android SDK Licenses
+        run: |
+          yes | sdkmanager --licenses 2>/dev/null || true
 
       - name: ⚙️ Grant Execution Permission to Gradle
         run: chmod +x android/gradlew
 
       - name: 📱 Build Signed Release APK (Universal Direct Install)
         env:
-          KEYSTORE_FILE: "release.keystore"
           KEYSTORE_PASSWORD: "vintagepass2026"
           KEY_ALIAS: "vintage_bookshelf"
           KEY_PASSWORD: "vintagepass2026"
@@ -88,7 +93,6 @@ jobs:
 
       - name: 🚀 Build Signed Release AAB (Google Play Store Bundle)
         env:
-          KEYSTORE_FILE: "release.keystore"
           KEYSTORE_PASSWORD: "vintagepass2026"
           KEY_ALIAS: "vintage_bookshelf"
           KEY_PASSWORD: "vintagepass2026"

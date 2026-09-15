@@ -16,20 +16,32 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
     signingConfigs {
         release {
-            def keystoreFile = file(System.getenv("KEYSTORE_FILE") ?: "release.keystore")
+            def keystoreFile = file("release.keystore")
+            if (!keystoreFile.exists()) {
+                keystoreFile = file("../release.keystore")
+            }
             if (keystoreFile.exists()) {
                 storeFile keystoreFile
-                storePassword System.getenv("KEYSTORE_PASSWORD") ?: "vintagepass2026"
-                keyAlias System.getenv("KEY_ALIAS") ?: "vintage_bookshelf"
-                keyPassword System.getenv("KEY_PASSWORD") ?: "vintagepass2026"
+                storePassword(System.getenv("KEYSTORE_PASSWORD") ?: "vintagepass2026")
+                keyAlias(System.getenv("KEY_ALIAS") ?: "vintage_bookshelf")
+                keyPassword(System.getenv("KEY_PASSWORD") ?: "vintagepass2026")
+                v1SigningEnabled true
+                v2SigningEnabled true
             }
         }
     }
     buildTypes {
         release {
-            def keystoreFile = file(System.getenv("KEYSTORE_FILE") ?: "release.keystore")
+            def keystoreFile = file("release.keystore")
+            if (!keystoreFile.exists()) {
+                keystoreFile = file("../release.keystore")
+            }
             if (keystoreFile.exists()) {
                 signingConfig signingConfigs.release
             }
