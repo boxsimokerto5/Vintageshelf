@@ -49,6 +49,10 @@ jobs:
         run: |
           npx cap sync android
 
+      - name: 🎨 Verify & Apply Vintage Bookshelf App Icons & Splash
+        run: |
+          node scripts/generate-android-icons.cjs
+
       - name: 🔑 Auto-Generate Play Store Production Keystore
         run: |
           KEYSTORE_DIR="android/app"
